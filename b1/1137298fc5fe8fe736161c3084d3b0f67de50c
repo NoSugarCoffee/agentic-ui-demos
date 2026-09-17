@@ -1,0 +1,37 @@
+a2ui/agent.ts
+  s_6546b8ad9b480d::t_935650d1c3dafb 1
+README.md
+  s_6546b8ad9b480d::t_e6b7a80fb8af36 10-14,16-17,19-34,36-37,39,41-43,45-46,48,50,52-61,63
+a2ui/README.md
+  s_6546b8ad9b480d::t_0bc67e0c9d961a 1-47
+server.ts
+  s_6546b8ad9b480d::t_935650d1c3dafb 4-5
+  s_6546b8ad9b480d::t_3a745eaa887da7 9-14,40-43,45-46
+shared/README.md
+  s_6546b8ad9b480d::t_0bc67e0c9d961a 1-8
+mcp-apps/server.ts
+  s_6546b8ad9b480d::t_935650d1c3dafb 4,9
+mcp-apps/README.md
+  s_6546b8ad9b480d::t_0bc67e0c9d961a 1-29,37-46
+  s_6546b8ad9b480d::t_702cac882cd4f4 30-36
+CLAUDE.md
+  s_6546b8ad9b480d::t_e6b7a80fb8af36 20-36,42,48,56
+web/index.html
+  s_6546b8ad9b480d::t_935650d1c3dafb 81-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.44-trip",
+  "base_commit_sha": "b11137298fc5fe8fe736161c3084d3b0f67de50c",
+  "prompts": {},
+  "sessions": {
+    "s_6546b8ad9b480d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "449f995a-674c-4a7a-acf1-265798698615",
+        "model": "claude-opus-5"
+      },
+      "human_author": "NoSugarCoffee <25247325+NoSugarCoffee@users.noreply.github.com>"
+    }
+  }
+}
