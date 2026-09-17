@@ -1,0 +1,80 @@
+<!doctype html>
+<meta charset="utf-8" />
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 14px; font: 13px/1.4 ui-sans-serif, system-ui, sans-serif; }
+  .row { display: grid; grid-template-columns: 74px 1fr 60px; gap: 10px; align-items: center;
+         padding: 9px 10px; border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+         border-radius: 9px; margin-bottom: 7px; cursor: pointer; background: none; color: inherit;
+         width: 100%; text-align: left; font: inherit; }
+  .row:hover { background: color-mix(in srgb, currentColor 7%, transparent); }
+  .carrier { font-weight: 600; }
+  .times { font-variant-numeric: tabular-nums; opacity: .75; font-size: 12px; }
+  /* The bar is the point: a fixed component catalog has no widget for "price relative to the cheapest". */
+  .bar { height: 5px; border-radius: 3px; background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
+         margin-top: 5px; }
+  .price { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .done { padding: 16px; border-radius: 10px; text-align: center;
+          background: color-mix(in srgb, #22c55e 15%, transparent); }
+  .ref { font-family: ui-monospace, monospace; font-size: 17px; font-weight: 700; }
+</style>
+<div id="root"></div>
+<script>
+  const post = (message) => window.parent.postMessage(message, '*');
+
+  let nextId = 1;
+  const pending = new Map();
+
+  // The iframe is an MCP client: it calls tools on the same server the host is talking to.
+  const callTool = (name, args) =>
+    new Promise((resolve, reject) => {
+      const id = nextId++;
+      pending.set(id, { resolve, reject });
+      post({ jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } });
+    });
+
+  const reportHeight = () =>
+    post({ jsonrpc: '2.0', method: 'notifications/ui/sizeChanged',
+           params: { height: document.body.scrollHeight } });
+
+  const render = (flights) => {
+    const cheapest = Math.min(...flights.map(f => f.priceUsd));
+    const dearest = Math.max(...flights.map(f => f.priceUsd));
+    const span = Math.max(dearest - cheapest, 1);
+    root.replaceChildren(...flights.map(flight => {
+      const button = document.createElement('button');
+      button.className = 'row';
+      button.innerHTML =
+        `<div><div class="carrier">${flight.carrier}</div>
+              <div class="times">${flight.id}</div></div>
+         <div><div class="times">${flight.depart} &rarr; ${flight.arrive} &middot; ${
+            flight.stops === 0 ? 'nonstop' : flight.stops + ' stop'}</div>
+              <div class="bar" style="width:${20 + 80 * (flight.priceUsd - cheapest) / span}%"></div></div>
+         <div class="price">$${flight.priceUsd}</div>`;
+      button.onclick = async () => {
+        const result = await callTool('book_flight', { id: flight.id });
+        const booking = result.structuredContent;
+        root.innerHTML =
+          `<div class="done">Booked ${booking.flight.carrier} ${booking.flight.id}<br />
+             <span class="ref">${booking.reference}</span></div>`;
+        reportHeight();
+      };
+      return button;
+    }));
+    reportHeight();
+  };
+
+  window.addEventListener('message', (event) => {
+    const message = event.data;
+    if (message.method === 'ui/render') {
+      render(message.params.structuredContent.flights);
+      return;
+    }
+    const waiting = pending.get(message.id);
+    if (waiting === undefined) return;
+    pending.delete(message.id);
+    message.error ? waiting.reject(new Error(message.error.message)) : waiting.resolve(message.result);
+  });
+
+  post({ jsonrpc: '2.0', method: 'notifications/ui/ready', params: {} });
+</script>

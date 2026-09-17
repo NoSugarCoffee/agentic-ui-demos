@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MCP Apps vs A2UI</title>
+<style>
+  :root { color-scheme: light dark; --line: color-mix(in srgb, currentColor 16%, transparent); }
+  body { margin: 0; padding: 20px; font: 14px/1.5 ui-sans-serif, system-ui, sans-serif; }
+  h1 { font-size: 17px; margin: 0 0 4px; }
+  .lede { opacity: .7; margin: 0 0 16px; }
+  .controls { display: flex; gap: 10px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+  .controls button { padding: 7px 13px; border-radius: 8px; border: 1px solid var(--line);
+                     background: none; color: inherit; font: inherit; cursor: pointer; }
+  .panes { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+  .pane { border: 1px solid var(--line); border-radius: 12px; padding: 14px; min-width: 0; }
+  .pane h2 { font-size: 14px; margin: 0 0 2px; }
+  .pane .sub { font-size: 12px; opacity: .65; margin: 0 0 12px; }
+  .surface { border: 1px dashed var(--line); border-radius: 10px; min-height: 120px; overflow: hidden; }
+  iframe { width: 100%; border: 0; display: block; }
+  pre { font: 11px/1.5 ui-monospace, monospace; background: color-mix(in srgb, currentColor 6%, transparent);
+        border-radius: 8px; padding: 9px; margin: 10px 0 0; max-height: 132px; overflow: auto;
+        white-space: pre-wrap; word-break: break-word; }
+
+  /* The A2UI pane's look lives entirely here, in the client - swap skins and the agent never knows. */
+  .skin-plain .a2-column { display: flex; flex-direction: column; gap: 7px; padding: 12px; }
+  .skin-plain .a2-heading { font-size: 13px; margin: 0; }
+  .skin-plain .a2-text { margin: 0; font-family: ui-monospace, monospace; }
+  .skin-plain .a2-card { padding: 12px; }
+  .skin-plain .a2-list { display: flex; flex-direction: column; gap: 7px; }
+  .skin-plain .a2-button { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%;
+                           padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px;
+                           background: none; color: inherit; font: inherit; text-align: left;
+                           cursor: pointer; white-space: pre-line; }
+  .skin-plain .a2-button:hover { background: color-mix(in srgb, currentColor 7%, transparent); }
+  .skin-plain .a2-button-trailing { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .skin-bold { --accent: #6d28d9; }
+  .skin-bold .a2-column { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+  .skin-bold .a2-heading { font-size: 15px; margin: 0; letter-spacing: -.01em;
+                           text-transform: uppercase; color: var(--accent); }
+  .skin-bold .a2-text { margin: 0; font-family: ui-monospace, monospace; font-size: 16px; }
+  .skin-bold .a2-card { padding: 16px; border-radius: 14px;
+                        background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .skin-bold .a2-list { display: flex; flex-direction: column; gap: 10px; }
+  .skin-bold .a2-button { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%;
+                          padding: 14px; border: 0; border-radius: 14px; color: inherit; font: inherit;
+                          text-align: left; cursor: pointer; white-space: pre-line;
+                          background: color-mix(in srgb, var(--accent) 14%, transparent);
+                          box-shadow: inset 3px 0 0 var(--accent); }
+  .skin-bold .a2-button:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+  .skin-bold .a2-button-trailing { font-weight: 800; font-size: 16px; color: var(--accent); }
+</style>
+
+<h1>MCP Apps vs A2UI — the same tool, two renderer contracts</h1>
+<p class="lede">Left: the server ships HTML into a sandboxed iframe. Right: the agent ships a JSON
+component tree this page renders with its own widgets.</p>
+
+<div class="controls">
+  <label>Max price $<input id="price" type="number" value="420" step="10" style="width:70px" /></label>
+  <button id="run">Search both</button>
+  <button id="skin">Switch A2UI design system</button>
+</div>
+
+<div class="panes">
+  <section class="pane">
+    <h2>MCP Apps</h2>
+    <p class="sub">tools/list → _meta → resources/read → sandboxed iframe → postMessage JSON-RPC</p>
+    <div class="surface" id="mcp-surface"></div>
+    <pre id="mcp-log"></pre>
+  </section>
+
+  <section class="pane">
+    <h2>A2UI</h2>
+    <p class="sub">agent emits surfaceUpdate + dataModelUpdate → native widgets from a fixed catalog</p>
+    <div class="surface skin-plain" id="a2ui-surface"></div>
+    <pre id="a2ui-log"></pre>
+  </section>
+</div>
+
+<script type="module">
+  import { runMcpApp } from './mcp-host.js';
+  import { runA2ui } from './a2ui-client.js';
+
+  const price = document.getElementById('price');
+  const surface = document.getElementById('a2ui-surface');
+
+  const run = async () => {
+    const maxPriceUsd = Number(price.value);
+    await Promise.all([runMcpApp(maxPriceUsd), runA2ui(maxPriceUsd)]);
+  };
+
+  document.getElementById('run').onclick = run;
+  document.getElementById('skin').onclick = () => {
+    surface.classList.toggle('skin-plain');
+    surface.classList.toggle('skin-bold');
+  };
+
+  run();
+</script>
+</html>
