@@ -1,6 +1,7 @@
 # CLAUDE.md
 
-A side-by-side demo of two agent-UI renderer contracts: **MCP Apps** (server ships
+A collection of runnable agent-UI protocol demos. Currently one: a side-by-side
+comparison of two renderer contracts: **MCP Apps** (server ships
 sandboxed HTML) and **A2UI** (agent ships a declarative JSON component tree).
 Both drive the same flight-booking domain so the contrast is the only variable.
 

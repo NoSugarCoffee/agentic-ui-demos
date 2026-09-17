@@ -1,4 +1,8 @@
-# MCP Apps vs A2UI
+# Agentic UI demos
+
+Runnable demos of the protocols agents use to put real UI in front of a user.
+
+## MCP Apps vs A2UI
 
 One flight-booking tool, rendered two ways, side by side.
 
