@@ -1,16 +1,17 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { extname } from 'node:path';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { createMcpServer } from './mcp-server.ts';
-import { handleAction, searchSurface, type UserAction } from './a2ui-agent.ts';
+import { createMcpServer } from './mcp-apps/server.ts';
+import { handleAction, searchSurface, type UserAction } from './a2ui/agent.ts';
 
 const PORT = 8787;
 
-const MIME: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8'
+// An allowlist, not a served directory: mcp-apps/widget.html is deliberately absent,
+// so the MCP Apps UI is reachable only through resources/read.
+const STATIC_ROUTES: Record<string, { readonly file: string; readonly type: string }> = {
+  '/': { file: 'web/index.html', type: 'text/html; charset=utf-8' },
+  '/mcp-apps/host.js': { file: 'mcp-apps/host.js', type: 'text/javascript; charset=utf-8' },
+  '/a2ui/client.js': { file: 'a2ui/client.js', type: 'text/javascript; charset=utf-8' }
 };
 
 const readBody = async (req: IncomingMessage): Promise<unknown> => {
@@ -36,14 +37,13 @@ const handleMcp = async (req: IncomingMessage, res: ServerResponse): Promise<voi
 };
 
 const serveStatic = async (pathname: string, res: ServerResponse): Promise<void> => {
-  const file = pathname === '/' ? '/index.html' : pathname;
-  try {
-    const body = await readFile(new URL(`./public${file}`, import.meta.url));
-    res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' });
-    res.end(body);
-  } catch {
-    res.writeHead(404).end('not found');
+  const route = STATIC_ROUTES[pathname];
+  if (route === undefined) {
+    res.writeHead(404).end(`No route for ${pathname}`);
+    return;
   }
+  res.writeHead(200, { 'content-type': route.type });
+  res.end(await readFile(new URL(`./${route.file}`, import.meta.url)));
 };
 
 createServer((req, res) => {

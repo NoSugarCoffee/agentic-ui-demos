@@ -1,4 +1,4 @@
-import { bookFlight, searchFlights, type Flight } from './flights.ts';
+import { bookFlight, searchFlights, type Flight } from '../shared/flights.ts';
 
 export type ValueRef = { readonly literal: string } | { readonly path: string };
 

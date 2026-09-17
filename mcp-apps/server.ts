@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { bookFlight, searchFlights } from './flights.ts';
+import { bookFlight, searchFlights } from '../shared/flights.ts';
 
 const WIDGET_URI = 'ui://widget/flight-picker.html';
 
 // Served only through resources/read, never over plain HTTP: the UI travels on the protocol.
-const widgetHtml = (): string => readFileSync(new URL('./widget/flight-picker.html', import.meta.url), 'utf8');
+const widgetHtml = (): string => readFileSync(new URL('./widget.html', import.meta.url), 'utf8');
 
 export const createMcpServer = (): McpServer => {
   const server = new McpServer({ name: 'flights-mcp-apps', version: '1.0.0' });

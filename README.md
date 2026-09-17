@@ -2,50 +2,65 @@
 
 Runnable demos of the protocols agents use to put real UI in front of a user.
 
-## MCP Apps vs A2UI
-
-One flight-booking tool, rendered two ways, side by side.
-
 ```bash
 npm install
 npm start          # http://localhost:8787
 ```
 
-Requires Node 24+ (the server is TypeScript run directly, no build step).
+Node 24+ (TypeScript runs directly — no build step).
 
-## What each pane does
+---
 
-**MCP Apps** (`mcp-server.ts`, `widget/flight-picker.html`, `public/mcp-host.js`)
+## MCP Apps vs A2UI
 
-1. `tools/list` — the host reads `_meta["mcp/ui"].resourceUri` off `search_flights`
-2. `tools/call search_flights` — returns `structuredContent`
-3. `resources/read ui://widget/flight-picker.html` — the UI arrives *over the protocol*
-4. the host drops that HTML into `<iframe sandbox="allow-scripts">`
-5. the iframe talks back over `postMessage` JSON-RPC: `notifications/ui/ready`,
-   `notifications/ui/sizeChanged`, and `tools/call book_flight`
+One flight-booking tool, rendered two ways, side by side. Each protocol owns a
+directory, so it is always clear which file belongs to which side:
 
-The widget is never served over HTTP — it lives in `widget/`, outside `public/`.
+```
+shared/      flights.ts        the ONLY shared code — the domain both sides render
+             README.md
 
-**A2UI** (`a2ui-agent.ts`, `public/a2ui-client.js`)
+mcp-apps/    server.ts         MCP server: ui:// resource + tools          (Node)
+             widget.html       the UI, shipped over the protocol           (iframe)
+             host.js           host: sandbox + postMessage bridge          (browser)
+             README.md         ← how this side works
 
-1. the agent returns `surfaceUpdate` (component tree) + `dataModelUpdate` (data) + `beginRendering`
-2. `CATALOG` in the client maps each component name to a real DOM widget
-3. a `Button`'s action posts `{name, context}` back; the agent replies with a new surface
+a2ui/        agent.ts          emits surfaceUpdate + dataModelUpdate       (Node)
+             client.js         renders it from a fixed widget CATALOG      (browser)
+             README.md         ← how this side works
 
-No markup crosses the wire, so nothing the agent sends can execute.
+web/         index.html        the split-screen page + all A2UI styling
+server.ts                      routing only: /mcp, /a2ui/*, static allowlist
+```
 
-## Things to try
+Nothing is shared between `mcp-apps/` and `a2ui/`. They meet only at `shared/flights.ts`
+and at the two panes of `web/index.html`.
 
-- **"Switch A2UI design system"** — the right pane restyles completely; the JSON the agent
-  sent is byte-identical. The left pane can't follow, because the server chose its own CSS.
-- **The price bars in the left pane** — a gradient bar sized by price relative to the cheapest
-  flight. There is no `PriceBar` in the A2UI catalog, and the agent can't add one.
-- **Break the catalog** — add `{ Map: {...} }` to a `surfaceUpdate` in `a2ui-agent.ts`. The client
-  throws `Component "Map" is not in this client's catalog` instead of rendering something unknown.
-- **Try to reach out of the sandbox** — add `fetch('/mcp')` to the widget. It fails; the iframe's
-  only channel is `postMessage` to the host.
+### The difference in one line each
 
-## Caveat
+**MCP Apps** — the server publishes HTML as a `ui://` resource; the host reads the template
+off the tool's `_meta`, drops it in a sandboxed iframe, and relays `postMessage` JSON-RPC
+back to the same MCP server. Unbounded UI, untrusted code, needs a webview.
+
+**A2UI** — the agent emits a component tree plus a data model; the client renders it from a
+fixed catalog of its own widgets. Bounded UI, no code executed, renders natively anywhere.
+
+See `mcp-apps/README.md` and `a2ui/README.md` for each side's message flow.
+
+### Things to try
+
+- **"Switch A2UI design system"** — the right pane restyles completely while the JSON the
+  agent sent stays byte-identical. The left pane can't follow; the server picked its own CSS.
+- **The price bars on the left** — a gradient bar sized by fare relative to the cheapest.
+  There is no `PriceBar` in the A2UI catalog, and the agent cannot add one.
+- **Break the catalog** — add `{ Map: {...} }` to a `surfaceUpdate` in `a2ui/agent.ts`. The
+  client throws instead of rendering something unknown.
+- **Try to escape the sandbox** — add `fetch('/mcp')` to `mcp-apps/widget.html`. It fails;
+  `postMessage` to the host is the only channel out.
+- **Try to fetch the widget** — `curl localhost:8787/mcp-apps/widget.html` returns 404. It is
+  absent from `STATIC_ROUTES`, so it only ever travels over `resources/read`.
+
+### Caveat
 
 Both specs are young (late 2025). The shapes here are right, but exact field names —
 `_meta["mcp/ui"]` in particular — have moved between revisions and differ from the
