@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createMcpServer } from './mcp-apps/server.ts';
 import { handleAction, searchSurface, type UserAction } from './a2ui/agent.ts';
+import { runAgent, type RunInput } from './ag-ui/agent.ts';
 
 const PORT = 8787;
 
@@ -11,7 +12,8 @@ const PORT = 8787;
 const STATIC_ROUTES: Record<string, { readonly file: string; readonly type: string }> = {
   '/': { file: 'web/index.html', type: 'text/html; charset=utf-8' },
   '/mcp-apps/host.js': { file: 'mcp-apps/host.js', type: 'text/javascript; charset=utf-8' },
-  '/a2ui/client.js': { file: 'a2ui/client.js', type: 'text/javascript; charset=utf-8' }
+  '/a2ui/client.js': { file: 'a2ui/client.js', type: 'text/javascript; charset=utf-8' },
+  '/ag-ui/client.js': { file: 'ag-ui/client.js', type: 'text/javascript; charset=utf-8' }
 };
 
 const readBody = async (req: IncomingMessage): Promise<unknown> => {
@@ -36,6 +38,20 @@ const handleMcp = async (req: IncomingMessage, res: ServerResponse): Promise<voi
   await transport.handleRequest(req, res, await readBody(req));
 };
 
+// AG-UI is transport-agnostic; SSE is the common choice and the only streaming
+// one of the three demos needs.
+const handleAgUiRun = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+  res.writeHead(200, {
+    'content-type': 'text/event-stream',
+    'cache-control': 'no-cache',
+    connection: 'keep-alive'
+  });
+  for await (const event of runAgent((await readBody(req)) as RunInput)) {
+    res.write(`data: ${JSON.stringify(event)}\n\n`);
+  }
+  res.end();
+};
+
 const serveStatic = async (pathname: string, res: ServerResponse): Promise<void> => {
   const route = STATIC_ROUTES[pathname];
   if (route === undefined) {
@@ -54,6 +70,7 @@ createServer((req, res) => {
       const body = (await readBody(req)) as { maxPriceUsd: number };
       return sendJson(res, 200, searchSurface(body.maxPriceUsd));
     }
+    if (pathname === '/ag-ui/run') return handleAgUiRun(req, res);
     if (pathname === '/a2ui/action') {
       return sendJson(res, 200, handleAction((await readBody(req)) as UserAction));
     }

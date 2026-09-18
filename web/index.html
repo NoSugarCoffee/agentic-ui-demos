@@ -2,7 +2,7 @@
 <html lang="en">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>MCP Apps vs A2UI</title>
+<title>Agentic UI demos</title>
 <style>
   :root { color-scheme: light dark; --line: color-mix(in srgb, currentColor 16%, transparent); }
   body { margin: 0; padding: 20px; font: 14px/1.5 ui-sans-serif, system-ui, sans-serif; }
@@ -11,7 +11,7 @@
   .controls { display: flex; gap: 10px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
   .controls button { padding: 7px 13px; border-radius: 8px; border: 1px solid var(--line);
                      background: none; color: inherit; font: inherit; cursor: pointer; }
-  .panes { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+  .panes { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
   .pane { border: 1px solid var(--line); border-radius: 12px; padding: 14px; min-width: 0; }
   .pane h2 { font-size: 14px; margin: 0 0 2px; }
   .pane .sub { font-size: 12px; opacity: .65; margin: 0 0 12px; }
@@ -49,15 +49,31 @@
                           box-shadow: inset 3px 0 0 var(--accent); }
   .skin-bold .a2-button:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
   .skin-bold .a2-button-trailing { font-weight: 800; font-size: 16px; color: var(--accent); }
+
+  /* AG-UI pane: the frontend owns every pixel here. Nothing below was described by the agent. */
+  #agui-surface { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+  .ag-message { margin: 0; padding: 9px 11px; border-radius: 10px 10px 10px 3px;
+                background: color-mix(in srgb, currentColor 8%, transparent); font-size: 13px; }
+  .ag-message::after { content: '▍'; opacity: .45; }
+  .ag-heading { font-size: 13px; margin: 4px 0 0; opacity: .8; }
+  .ag-row { display: flex; justify-content: space-between; align-items: center; gap: 10px;
+            width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px;
+            background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .ag-row:hover { background: color-mix(in srgb, currentColor 7%, transparent); }
+  .ag-times { opacity: .7; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .ag-price { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ag-confirmation { padding: 16px; border-radius: 10px; text-align: center;
+                     background: color-mix(in srgb, #0ea5e9 15%, transparent); }
+  .ag-ref { font-family: ui-monospace, monospace; font-size: 17px; font-weight: 700; }
 </style>
 
-<h1>MCP Apps vs A2UI — the same tool, two renderer contracts</h1>
-<p class="lede">Left: the server ships HTML into a sandboxed iframe. Right: the agent ships a JSON
-component tree this page renders with its own widgets.</p>
+<h1>MCP Apps vs A2UI vs AG-UI — the same tool, three renderer contracts</h1>
+<p class="lede">Ships HTML (MCP Apps) · ships a component tree (A2UI) · ships events and state,
+no UI at all (AG-UI).</p>
 
 <div class="controls">
   <label>Max price $<input id="price" type="number" value="420" step="10" style="width:70px" /></label>
-  <button id="run">Search both</button>
+  <button id="run">Search all three</button>
   <button id="skin">Switch A2UI design system</button>
 </div>
 
@@ -75,18 +91,26 @@ component tree this page renders with its own widgets.</p>
     <div class="surface skin-plain" id="a2ui-surface"></div>
     <pre id="a2ui-log"></pre>
   </section>
+
+  <section class="pane">
+    <h2>AG-UI</h2>
+    <p class="sub">agent streams events + state deltas → the frontend decides what to draw</p>
+    <div class="surface" id="agui-surface"></div>
+    <pre id="agui-log"></pre>
+  </section>
 </div>
 
 <script type="module">
   import { runMcpApp } from '/mcp-apps/host.js';
   import { runA2ui } from '/a2ui/client.js';
+  import { runAgUi } from '/ag-ui/client.js';
 
   const price = document.getElementById('price');
   const surface = document.getElementById('a2ui-surface');
 
   const run = async () => {
     const maxPriceUsd = Number(price.value);
-    await Promise.all([runMcpApp(maxPriceUsd), runA2ui(maxPriceUsd)]);
+    await Promise.all([runMcpApp(maxPriceUsd), runA2ui(maxPriceUsd), runAgUi(maxPriceUsd)]);
   };
 
   document.getElementById('run').onclick = run;

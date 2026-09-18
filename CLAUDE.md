@@ -1,9 +1,14 @@
 # CLAUDE.md
 
-A collection of runnable agent-UI protocol demos. Currently one: a side-by-side
-comparison of two renderer contracts: **MCP Apps** (server ships
-sandboxed HTML) and **A2UI** (agent ships a declarative JSON component tree).
-Both drive the same flight-booking domain so the contrast is the only variable.
+A collection of runnable agent-UI protocol demos. Currently one: a three-way
+comparison of renderer contracts — **MCP Apps** (server ships sandboxed HTML),
+**A2UI** (agent ships a declarative component tree), and **AG-UI** (agent ships
+events and state patches, and never describes UI at all). All three drive the
+same flight-booking domain so the contract is the only variable.
+
+MCP Apps and A2UI are alternatives to each other. AG-UI is on a different axis:
+it answers "what happened", not "what should this look like". Keep that framing
+in the docs — collapsing all three into one spectrum is the easy wrong read.
 
 ## Commands
 
@@ -22,17 +27,19 @@ reader can tell at a glance which file implements which side.
 
 | Path | Runs where | Role |
 | --- | --- | --- |
-| `shared/flights.ts` | Node | The only shared code. Both sides call these pure functions. |
+| `shared/flights.ts` | Node | The only shared code. All three sides call these pure functions. |
 | `mcp-apps/server.ts` | Node | MCP server: the `ui://` resource plus the two tools. |
 | `mcp-apps/widget.html` | Sandboxed iframe | The MCP Apps UI. Never served over HTTP. |
 | `mcp-apps/host.js` | Browser | Host: template lookup, sandbox, postMessage bridge. |
 | `a2ui/agent.ts` | Node | Builds `surfaceUpdate` + `dataModelUpdate`. Emits no markup. |
 | `a2ui/client.js` | Browser | The component `CATALOG` renderer. |
-| `web/index.html` | Browser | Split-screen page and all A2UI skin CSS. |
-| `server.ts` | Node | Routing only: `/mcp`, `/a2ui/*`, and `STATIC_ROUTES`. |
+| `ag-ui/agent.ts` | Node | Streams typed events + JSON Patch state. No UI vocabulary. |
+| `ag-ui/client.js` | Browser | Folds events into state; owns every pixel it draws. |
+| `web/index.html` | Browser | Three-pane page, A2UI skin CSS, and AG-UI pane CSS. |
+| `server.ts` | Node | Routing only: `/mcp`, `/a2ui/*`, `/ag-ui/run`, and `STATIC_ROUTES`. |
 
-`mcp-apps/` and `a2ui/` must not import from each other. They meet only at
-`shared/flights.ts` and at the two panes of `web/index.html`. Each has its own README
+`mcp-apps/`, `a2ui/` and `ag-ui/` must not import from each other. They meet only at
+`shared/flights.ts` and at the three panes of `web/index.html`. Each has its own README
 explaining that side's message flow; update it when you change the flow.
 
 ## Invariants
@@ -48,8 +55,15 @@ These are the point of the demo, not incidental choices:
 - `a2ui/agent.ts` never emits HTML, CSS, or anything executable. A new visual
   affordance on that side requires a new entry in the client's `CATALOG`.
 - Unknown A2UI components throw rather than degrade. Keep it that way.
-- The two panes must stay visually distinguishable — the left pane's price bars
-  exist specifically to show something the fixed catalog cannot express.
+- `ag-ui/agent.ts` contains no HTML, no component names, no styling and no layout hints.
+  If presentation vocabulary appears there, the demo has lost its point.
+- AG-UI's streaming must stay real — one SSE frame per `TEXT_MESSAGE_CONTENT`, so the text
+  visibly types out. Do not batch the deltas or fake it with a client-side timer.
+- The booking run must use `STATE_DELTA`, not another `STATE_SNAPSHOT`. Showing that the
+  client patches state it already holds is the reason that path exists.
+- The three panes must stay visually distinguishable — the price bars (MCP Apps), the skin
+  switch (A2UI) and the streaming text (AG-UI) each exist to show something the other two
+  contracts cannot express. Do not "harmonise" them.
 
 ## Spec drift
 
